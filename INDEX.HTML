@@ -1,503 +1,798 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="theme-color" content="#0f1220" />
-<title>PASAPALABRA — V20 (mobile, color + ayuda + “Escribir”)</title>
-<style>
-  :root{
-    --bg:#0c0f24;--panel:#141a3d;--ink:#eef2fb;--muted:#9aa3b2;--brand:#7c5cff;
-    --ok:#1ec28b;--bad:#ff5d6c;--waiting:#25306a;--accent:#ffd166;
-    --ring1:#1b214f;--ring2:#0a0f2e;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;color:var(--ink);
-    font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Ubuntu,"Helvetica Neue",Arial,sans-serif;
-    background:
-      radial-gradient(1200px 800px at 10% 10%, rgba(124,92,255,.25), transparent 60%),
-      radial-gradient(900px 600px at 90% 20%, rgba(30,194,139,.22), transparent 60%),
-      linear-gradient(180deg,#0a0d22,#10163a 55%,#0b0f2a);
-  }
-  .wrap{max-width:1200px;margin-inline:auto;padding:14px}
-  /* Cabecera grande “PASAPALABRA” */
-  .mast{
-    display:flex;align-items:center;justify-content:space-between;gap:10px;
-    background:linear-gradient(90deg,#111851, #1a2b6e 60%, #111851);
-    border:1px solid #243189;border-radius:18px;padding:14px 16px;margin-bottom:12px;
-    box-shadow:0 8px 22px rgba(0,0,0,.25), inset 0 0 24px rgba(255,255,255,.06);
-  }
-  .mast h1{
-    margin:0;font-size:26px;letter-spacing:.12em;font-weight:900;
-    text-transform:uppercase;
-    text-shadow:0 2px 0 rgba(0,0,0,.25), 0 0 24px rgba(124,92,255,.35);
-  }
-  .mast .actions{display:flex;gap:8px;flex-wrap:wrap}
-  .badge{background:var(--waiting);color:var(--ink);padding:6px 10px;border-radius:999px;font-size:12px}
-  .btn{border:0;padding:12px 14px;border-radius:14px;cursor:pointer;font-weight:700;font-size:16px}
-  .btn-ghost{background:#101640;color:var(--ink);border:1px solid #2a357a}
-  .btn-primary{background:var(--brand);color:#fff}
-  .btn-danger{background:var(--bad);color:#fff}
-  .btn-ok{background:var(--ok);color:#002017}
-  .btn-write.active{background:#ffd166;color:#241a00}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  @media (max-width:900px){.grid{grid-template-columns:1fr}}
-  .panel{background:var(--panel);border:1px solid #1e2660;border-radius:16px;padding:12px;box-shadow:0 8px 22px rgba(0,0,0,.25)}
-  .panel h2{margin:0 0 6px 0;font-size:15px}
-  .timer{font-variant-numeric:tabular-nums;font-weight:900;font-size:34px;letter-spacing:1px}
-  .stats{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
-  .stat{background:#0f1542;border:1px solid #28327a;padding:6px 10px;border-radius:10px;font-size:13px}
-  .stat strong{font-size:15px}
-  /* Rosco “TV”: aro luminoso + puntos arcoíris */
-  .rosco-wrap{
-    position:relative;aspect-ratio:1/1;max-width:360px;margin:12px auto;
-    border-radius:50%;
-    background:
-      radial-gradient(circle at 50% 50%, #12194a 57%, transparent 58%),
-      radial-gradient(circle at 50% 50%, var(--ring1) 64%, var(--ring2) 66%, transparent 67%);
-    box-shadow:0 0 0 2px #202a70 inset, 0 0 38px rgba(124,92,255,.25) inset;
-  }
-  .dot{
-    position:absolute;width:36px;height:36px;border-radius:50%;
-    display:grid;place-items:center;font-weight:900;color:#0b0f2a;
-    border:2px solid rgba(255,255,255,.15);
-    transform:translate(-50%,-50%);
-    text-shadow:0 1px 0 rgba(255,255,255,.25);
-  }
-  .dot::after{content:attr(data-letter)}
-  .dot.active{outline:3px solid var(--accent);outline-offset:2px;filter:brightness(1.2)}
-  .dot.ok{background:linear-gradient(#2ef0b1,#13bd86);color:#042821;border-color:#35e6aa}
-  .dot.bad{background:linear-gradient(#ff8a99,#ff5d6c);color:#31070b;border-color:#ff6f7b}
-  .center{grid-column:1/-1}
-  .prompt{font-size:16px;line-height:1.5}
-  .prompt .tag{display:inline-block;margin-bottom:8px;background:#0f1542;border:1px solid #29347c;color:#a8b1c6;padding:4px 8px;border-radius:999px;font-size:12px}
-  .clue{font-size:18px;margin:6px 0 12px 0;min-height:54px}
-  .inputrow{display:flex;gap:8px}
-  input[type=text]{flex:1;padding:14px;border-radius:12px;border:1px solid #2a357a;background:#0c1231;color:var(--ink);font-size:18px}
-  .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-  .footer{display:flex;justify-content:space-between;gap:10px;margin-top:10px;color:#9aa3b2;font-size:12px}
-  .winner{padding:10px 12px;border-radius:12px;background:#0e1330;border:1px solid #2b3378;margin-top:10px}
-  /* Overlay Pausa */
-  .overlay{position:fixed;inset:0;background:rgba(6,10,26,.75);display:none;place-items:center;z-index:50;padding:20px}
-  .overlay .box{background:#0c1231;border:1px solid #2b3378;border-radius:16px;padding:18px 20px;text-align:center;max-width:420px}
-  .overlay .box h3{margin:0 0 8px 0}
-  /* Botón flotante de pausa/reanudar */
-  .fab{position:fixed;right:16px;bottom:16px;width:64px;height:64px;border-radius:50%;border:0;background:var(--brand);color:#fff;font-size:26px;display:grid;place-items:center;box-shadow:0 8px 25px rgba(0,0,0,.35);z-index:60}
-  .fab:active{transform:scale(.98)}
-  /* Diálogo ayuda */
-  dialog{border:1px solid #2b3378;border-radius:16px;background:#0c1231;color:var(--ink);max-width:520px}
-  dialog::backdrop{background:rgba(7,10,26,.6)}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#111111" />
+  <title>PosePrompt Studio</title>
+  <style>
+    :root{
+      --bg:#0b0b0f;
+      --bg-soft:#14141b;
+      --panel:#191923;
+      --panel-2:#20202c;
+      --line:#303041;
+      --text:#f5f3f1;
+      --muted:#b6b0ab;
+      --accent:#ff8f70;
+      --accent-2:#ffd7cb;
+      --good:#8ce6c0;
+      --shadow:0 20px 50px rgba(0,0,0,.35);
+      --radius:24px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:
+      radial-gradient(circle at top left, rgba(255,143,112,.18), transparent 30%),
+      radial-gradient(circle at top right, rgba(255,215,203,.12), transparent 30%),
+      linear-gradient(180deg, #09090c 0%, #111118 100%);color:var(--text)}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+
+    .shell{max-width:1380px;margin:0 auto;padding:24px}
+    .hero{
+      display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:stretch;margin-bottom:24px;
+    }
+    .hero-card,.detail-card,.filters,.card{
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);
+      backdrop-filter:blur(14px);
+    }
+    .hero-card{padding:32px}
+    .hero-kicker{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,143,112,.35);background:rgba(255,143,112,.12);color:var(--accent-2);font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+    h1{font-size:clamp(2.2rem,6vw,4.6rem);line-height:1.03;margin:18px 0 12px;max-width:12ch}
+    .hero-card p{font-size:1.05rem;line-height:1.7;color:var(--muted);max-width:62ch;margin:0 0 20px}
+    .hero-points{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+    .pill{padding:10px 14px;border-radius:999px;background:var(--bg-soft);border:1px solid var(--line);color:var(--accent-2);font-size:.95rem}
+    .hero-preview{padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .mini-card{padding:18px;border-radius:20px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;justify-content:space-between;min-height:220px}
+    .mini-card h2{font-size:1rem;margin:0 0 8px}
+    .mini-card p{margin:0;color:var(--muted);line-height:1.55;font-size:.95rem}
+
+    .layout{display:grid;grid-template-columns:340px minmax(0,1fr);gap:24px;align-items:start}
+    .filters{position:sticky;top:20px;padding:22px}
+    .filters h2,.detail-card h2{margin:0 0 14px;font-size:1.15rem}
+    .filter-group{margin-bottom:18px}
+    .filter-group label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:8px}
+    .filter-group input,.filter-group select{
+      width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:var(--bg-soft);color:var(--text)
+    }
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0 22px}
+    .stat{padding:14px 12px;border-radius:18px;background:var(--bg-soft);border:1px solid var(--line)}
+    .stat strong{display:block;font-size:1.3rem;margin-bottom:4px}
+    .stat span{font-size:.82rem;color:var(--muted)}
+    .reset{width:100%;padding:14px 16px;border:none;border-radius:18px;background:linear-gradient(90deg,var(--accent),#ffae95);color:#1a1110;font-weight:700}
+
+    .content{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr);gap:24px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+    .card{padding:18px;display:flex;flex-direction:column;gap:16px;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;min-height:310px}
+    .card:hover,.card.active{transform:translateY(-4px);border-color:rgba(255,143,112,.6);box-shadow:0 20px 45px rgba(0,0,0,.42)}
+    .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+    .card h3{font-size:1rem;margin:0 0 8px}
+    .meta{display:flex;flex-wrap:wrap;gap:6px}
+    .meta span,.tag{display:inline-flex;padding:6px 10px;border-radius:999px;background:var(--bg-soft);border:1px solid var(--line);font-size:.78rem;color:var(--accent-2)}
+    .card p{margin:0;color:var(--muted);font-size:.94rem;line-height:1.55}
+    .select-btn,.copy-btn,.ghost-btn{
+      padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-weight:600
+    }
+    .select-btn{width:100%}
+    .select-btn:hover,.copy-btn:hover,.ghost-btn:hover{border-color:rgba(255,143,112,.45)}
+    .empty{padding:28px;border-radius:24px;border:1px dashed var(--line);color:var(--muted);text-align:center;background:rgba(255,255,255,.02)}
+
+    .detail-card{padding:24px;position:sticky;top:20px}
+    .detail-card .lead{color:var(--muted);line-height:1.65}
+    .detail-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:18px}
+    .detail-header h2{font-size:1.45rem;margin:0 0 10px}
+    .detail-preview{display:grid;place-items:center;padding:24px;border-radius:24px;background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.04));border:1px solid var(--line);margin-bottom:18px;min-height:310px}
+    .detail-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+    .detail-item{padding:14px;border-radius:18px;background:var(--bg-soft);border:1px solid var(--line)}
+    .detail-item small{display:block;color:var(--muted);margin-bottom:6px}
+    .prompt-box{padding:18px;border-radius:20px;background:#0f0f15;border:1px solid var(--line);margin:18px 0 12px}
+    .prompt-box pre{white-space:pre-wrap;word-break:break-word;margin:0;color:#fff6f2;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92rem;line-height:1.65}
+    .prompt-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .hint{font-size:.88rem;color:var(--muted);line-height:1.55;margin-top:12px}
+    .status{margin-top:10px;font-size:.88rem;color:var(--good);min-height:1.2em}
+
+    .silhouette{width:100%;max-width:210px;height:auto;overflow:visible}
+    .silhouette .skin{fill:#f5ede8}
+    .silhouette .fill{fill:#f5ede8}
+    .silhouette .stroke{stroke:#f5ede8;stroke-width:14;stroke-linecap:round;stroke-linejoin:round;fill:none}
+    .silhouette .thin{stroke-width:10}
+    .silhouette .ground{stroke:rgba(255,255,255,.16);stroke-width:4;stroke-linecap:round}
+    .silhouette .prop{fill:rgba(255,255,255,.14);stroke:rgba(255,255,255,.14);stroke-width:6}
+
+    .footer-note{margin-top:26px;padding:16px 18px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--muted);line-height:1.6}
+
+    @media (max-width:1120px){
+      .hero,.content{grid-template-columns:1fr}
+      .layout{grid-template-columns:1fr}
+      .filters,.detail-card{position:static}
+    }
+    @media (max-width:720px){
+      .shell{padding:16px}
+      .hero-preview{grid-template-columns:1fr}
+      .detail-list,.stats{grid-template-columns:1fr}
+    }
+  </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="mast">
-      <h1>PASAPALABRA</h1>
-      <div class="actions">
-        <button class="btn btn-ghost" id="btnHelp">📖 Leer antes de jugar</button>
-        <span class="badge">V20 · móvil · color</span>
-        <button class="btn btn-ghost" id="btnSettings">⚙️ Ajustes</button>
-        <button class="btn btn-ghost" id="btnNew">Nuevo rosco</button>
-      </div>
-    </div>
+  <main class="shell">
+    <section class="hero">
+      <article class="hero-card">
+        <span class="hero-kicker">Solo postura · solo silueta · prompts listos</span>
+        <h1>PosePrompt Studio</h1>
+        <p>
+          Prototipo de una app para explorar poses femeninas en formato de silueta y convertirlas en prompts listos para IA.
+          El foco está únicamente en la postura del cuerpo: ángulo, apoyo, arqueo, dirección de la mirada y actitud general.
+        </p>
+        <div class="hero-points">
+          <span class="pill">Frontal · perfil · espalda</span>
+          <span class="pill">Apoyada o sin apoyo</span>
+          <span class="pill">Seductora desde la postura</span>
+          <span class="pill">Prompt en español e inglés</span>
+        </div>
+      </article>
+      <aside class="hero-preview">
+        <section class="mini-card">
+          <div>
+            <h2>Cómo se usa</h2>
+            <p>Filtra por vista, apoyo y postura. Selecciona una silueta para ver su descripción corporal y copiar el prompt detallado.</p>
+          </div>
+          <span class="tag">Catálogo visual</span>
+        </section>
+        <section class="mini-card">
+          <div>
+            <h2>Qué resuelve</h2>
+            <p>Te ayuda a pasar de una idea vaga como “pose sugerente de perfil” a una descripción precisa y consistente para pedirla.</p>
+          </div>
+          <span class="tag">Biblioteca de poses</span>
+        </section>
+      </aside>
+    </section>
 
-    <section class="grid">
-      <div class="panel" id="pA">
-        <h2>Jugador A</h2>
-        <div class="timer" id="tA">02:25</div>
+    <section class="layout">
+      <aside class="filters">
+        <h2>Filtrar poses</h2>
+        <div class="filter-group">
+          <label for="searchInput">Buscar por nombre o descripción</label>
+          <input id="searchInput" type="search" placeholder="Ej. perfil, pared, arqueada" />
+        </div>
+        <div class="filter-group">
+          <label for="viewFilter">Vista</label>
+          <select id="viewFilter">
+            <option value="all">Todas</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="supportFilter">Apoyo</label>
+          <select id="supportFilter">
+            <option value="all">Todos</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="postureFilter">Postura base</label>
+          <select id="postureFilter">
+            <option value="all">Todas</option>
+          </select>
+        </div>
         <div class="stats">
-          <div class="stat">✅ <strong id="aOK">0</strong> correctas</div>
-          <div class="stat">❌ <strong id="aBAD">0</strong> fallos</div>
-          <div class="stat">⏳ <strong id="aPEN">25</strong> pendientes</div>
+          <div class="stat">
+            <strong id="visibleCount">0</strong>
+            <span>poses visibles</span>
+          </div>
+          <div class="stat">
+            <strong id="totalCount">0</strong>
+            <span>poses cargadas</span>
+          </div>
+          <div class="stat">
+            <strong id="selectedName">—</strong>
+            <span>selección</span>
+          </div>
         </div>
-        <div class="rosco-wrap" id="rA"></div>
-      </div>
+        <button class="reset" id="resetFilters">Restablecer filtros</button>
+        <div class="footer-note">
+          Consejo: si esta biblioteca te encaja, el siguiente paso natural sería guardar favoritos, etiquetar poses y exportar prompts con variantes de cámara, lente y estilo.
+        </div>
+      </aside>
 
-      <div class="panel" id="pB">
-        <h2>Jugador B</h2>
-        <div class="timer" id="tB">02:25</div>
-        <div class="stats">
-          <div class="stat">✅ <strong id="bOK">0</strong> correctas</div>
-          <div class="stat">❌ <strong id="bBAD">0</strong> fallos</div>
-          <div class="stat">⏳ <strong id="bPEN">25</strong> pendientes</div>
-        </div>
-        <div class="rosco-wrap" id="rB"></div>
-      </div>
+      <div class="content">
+        <section>
+          <div class="grid" id="poseGrid"></div>
+        </section>
 
-      <div class="center panel">
-        <div class="prompt">
-          <span class="tag" id="turnTag">Turno: Jugador A</span>
-          <div class="clue" id="clue">Pulsa “Empezar”. Si activas voz, leeré cada definición.</div>
-        </div>
-        <div class="inputrow">
-          <input id="answer" type="text" placeholder="Escribe o usa el micrófono (di ‘pasapalabra’)" autocomplete="off" inputmode="latin" />
-          <button class="btn btn-primary" id="btnStart">Empezar</button>
-          <button class="btn btn-ok" id="btnAnswer" disabled>Responder</button>
-          <button class="btn btn-ghost" id="btnPass" disabled>Pasapalabra</button>
-          <button class="btn btn-ghost" id="btnMic" title="Responder por voz" disabled>🎙️</button>
-        </div>
-        <div class="toolbar">
-          <button class="btn btn-ghost btn-write" id="btnWrite">✍️ Escribir (pausar)</button>
-          <button class="btn btn-danger" id="btnGiveUp" disabled>Marcar fallo</button>
-          <button class="btn btn-ghost" id="btnPause">Pausar</button>
-          <span id="supportNote" style="color:#9aa3b2;font-size:12px"></span>
-        </div>
-        <div class="winner" id="result" style="display:none"></div>
-        <div class="footer">
-          <span>Todo táctil. (Atajos opcionales: Enter/ESC)</span>
-          <span>Desempate por fallos</span>
-        </div>
+        <aside class="detail-card" id="detailPanel">
+          <p class="lead">Selecciona una pose para ver su descripción exacta y el prompt generado.</p>
+        </aside>
       </div>
     </section>
-  </div>
+  </main>
 
-  <!-- Overlay de Pausa -->
-  <div class="overlay" id="ovPause">
-    <div class="box">
-      <h3>Pausa</h3>
-      <p>El tiempo y la voz están detenidos.</p>
-      <button class="btn btn-primary" id="btnResume">Reanudar</button>
-    </div>
-  </div>
+  <script>
+    const poses = [
+      {
+        id: "frontal-cadera",
+        name: "Frontal con mano en la cadera",
+        view: "frontal",
+        support: "sin apoyo",
+        posture: "de pie",
+        attitude: "segura y sugerente",
+        arch: "leve",
+        description: "Peso sobre una pierna, cadera abierta, torso frontal y una mano descansando en la cadera.",
+        promptEs: "mujer adulta en silueta, vista frontal, de pie, peso apoyado en una pierna, cadera abierta, una mano en la cadera, la otra relajada, espalda con arqueo leve, postura segura y sugerente, solo silueta, sin rasgos faciales, fondo limpio",
+        promptEn: "adult woman silhouette, front view, standing, weight on one leg, hip pushed outward, one hand on hip, other arm relaxed, slight back arch, confident and suggestive body language, silhouette only, no facial detail, clean background",
+        silhouette: {
+          facing: 0, shoulderTilt: -2, hipTilt: 6, waistX: 0, chestX: 0,
+          leftArm: "hip", rightArm: "relaxed", leftLeg: "straight", rightLeg: "soft", arch: 8, prop: "none"
+        }
+      },
+      {
+        id: "perfil-arco",
+        name: "Perfil con espalda arqueada",
+        view: "perfil",
+        support: "sin apoyo",
+        posture: "de pie",
+        attitude: "sensual y elegante",
+        arch: "marcado",
+        description: "Cuerpo de perfil, pecho elevado, pelvis ligeramente adelantada y espalda arqueada para remarcar la curva.",
+        promptEs: "mujer adulta en silueta, cuerpo de perfil, de pie, espalda arqueada de forma marcada, pecho elevado, pelvis adelantada, mentón ligeramente alto, brazos suaves cerca del cuerpo, pose sensual basada en la postura, solo silueta, sin detalles de ropa, fondo neutro",
+        promptEn: "adult woman silhouette, full side profile, standing, pronounced arched back, lifted chest, pelvis forward, chin slightly raised, arms relaxed near the body, sensual pose defined by body posture, silhouette only, no clothing detail, neutral background",
+        silhouette: {
+          facing: 1, shoulderTilt: -4, hipTilt: 7, waistX: 16, chestX: 8,
+          leftArm: "frontTouch", rightArm: "backLine", leftLeg: "step", rightLeg: "straight", arch: 18, prop: "none"
+        }
+      },
+      {
+        id: "espalda-pared",
+        name: "Espalda a pared con giro",
+        view: "espalda",
+        support: "pared",
+        posture: "de pie",
+        attitude: "coqueta",
+        arch: "leve",
+        description: "Apoyo dorsal en pared, una rodilla flexionada y giro de hombros para insinuar la línea del torso.",
+        promptEs: "mujer adulta en silueta, vista de espaldas, apoyada en una pared, una rodilla flexionada, hombros girados ligeramente hacia un lado, cuello largo, espalda con arqueo suave, actitud coqueta basada en la postura, solo silueta, sin rostro visible",
+        promptEn: "adult woman silhouette, back view, leaning against a wall, one knee bent, shoulders rotated slightly to one side, elongated neck, soft back arch, flirtatious attitude expressed through posture, silhouette only, face not visible",
+        silhouette: {
+          facing: 0.2, shoulderTilt: 5, hipTilt: -4, waistX: -4, chestX: -2,
+          leftArm: "wall", rightArm: "thigh", leftLeg: "soft", rightLeg: "crossBack", arch: 10, prop: "wall"
+        }
+      },
+      {
+        id: "mesa-inclinada",
+        name: "Inclinada sobre una mesa",
+        view: "tres cuartos",
+        support: "mesa",
+        posture: "inclinada",
+        attitude: "sugerente",
+        arch: "medio",
+        description: "Tronco inclinado hacia delante con ambos brazos apoyados, cadera elevada y piernas largas detrás.",
+        promptEs: "mujer adulta en silueta, vista tres cuartos, inclinada hacia delante sobre una mesa, brazos extendidos apoyados, cadera elevada, espalda con curva media, piernas alargadas detrás, pose sugerente definida por la línea corporal, solo silueta, composición limpia",
+        promptEn: "adult woman silhouette, three-quarter view, leaning forward onto a table, both arms extended for support, hips lifted, medium back curve, elongated legs behind, suggestive pose defined by body line, silhouette only, clean composition",
+        silhouette: {
+          facing: 0.6, shoulderTilt: -8, hipTilt: 10, waistX: 18, chestX: 20,
+          leftArm: "table", rightArm: "table", leftLeg: "backLong", rightLeg: "backSoft", arch: 12, prop: "table"
+        }
+      },
+      {
+        id: "sentada-cruce",
+        name: "Sentada con piernas cruzadas",
+        view: "frontal",
+        support: "silla",
+        posture: "sentada",
+        attitude: "elegante",
+        arch: "leve",
+        description: "Sentada erguida, piernas cruzadas y una mano descansando sobre el muslo superior.",
+        promptEs: "mujer adulta en silueta, sentada en silla, vista frontal, piernas cruzadas, espalda recta con arqueo mínimo, una mano sobre el muslo, la otra relajada, pose elegante y sugerente por lenguaje corporal, solo silueta, sin detalles faciales",
+        promptEn: "adult woman silhouette, seated on a chair, front view, legs crossed, upright spine with minimal arch, one hand resting on the upper thigh, other arm relaxed, elegant and suggestive body language, silhouette only, no facial details",
+        silhouette: {
+          facing: 0, shoulderTilt: -1, hipTilt: 4, waistX: 0, chestX: 0,
+          leftArm: "thigh", rightArm: "chairSide", leftLeg: "crossSeat", rightLeg: "seatBase", arch: 4, prop: "chair"
+        }
+      },
+      {
+        id: "arrodillada-talones",
+        name: "Arrodillada sobre los talones",
+        view: "tres cuartos",
+        support: "suelo",
+        posture: "arrodillada",
+        attitude: "delicada",
+        arch: "medio",
+        description: "Rodillas juntas, cadera sobre talones y torso alzado con hombros hacia atrás.",
+        promptEs: "mujer adulta en silueta, pose arrodillada sobre los talones, vista tres cuartos, rodillas juntas, torso elevado, hombros hacia atrás, manos descansando suavemente, espalda con curva media, gesto delicado expresado solo por la silueta",
+        promptEn: "adult woman silhouette, kneeling on her heels, three-quarter view, knees together, torso lifted, shoulders pulled back, hands resting softly, medium back curve, delicate gesture expressed only through the silhouette",
+        silhouette: {
+          facing: 0.45, shoulderTilt: -3, hipTilt: 8, waistX: 10, chestX: 8,
+          leftArm: "lap", rightArm: "lap", leftLeg: "kneelFront", rightLeg: "kneelBack", arch: 10, prop: "floor"
+        }
+      },
+      {
+        id: "reclinada-divan",
+        name: "Reclinada de lado",
+        view: "perfil",
+        support: "diván",
+        posture: "reclinada",
+        attitude: "relajada y magnética",
+        arch: "suave",
+        description: "Cuerpo recostado lateralmente, torso apoyado en un antebrazo y piernas extendidas con ligera superposición.",
+        promptEs: "mujer adulta en silueta, pose reclinada de lado sobre diván, vista de perfil, torso sostenido por un antebrazo, piernas extendidas con ligera superposición, cuello alargado, postura relajada y magnética, solo silueta, enfoque en la línea del cuerpo",
+        promptEn: "adult woman silhouette, side reclining pose on a divan, profile view, torso supported by one forearm, legs extended with slight overlap, elongated neck, relaxed and magnetic posture, silhouette only, focus on body line",
+        silhouette: {
+          facing: 1, shoulderTilt: 2, hipTilt: 0, waistX: 20, chestX: 18,
+          leftArm: "reclineSupport", rightArm: "waist", leftLeg: "reclineLong", rightLeg: "reclineTop", arch: 4, prop: "divan"
+        }
+      },
+      {
+        id: "espalda-mirada",
+        name: "De espaldas mirando sobre el hombro",
+        view: "espalda",
+        support: "sin apoyo",
+        posture: "de pie",
+        attitude: "coqueta y segura",
+        arch: "leve",
+        description: "Vista trasera con giro cervical y ligera contraposición de hombros y caderas.",
+        promptEs: "mujer adulta en silueta, vista de espaldas, de pie, cabeza girada sobre el hombro, hombros y caderas en contraposición suave, una pierna relajada, postura coqueta y segura marcada por la silueta, sin detalles faciales, fondo vacío",
+        promptEn: "adult woman silhouette, back view, standing, head turned over the shoulder, gentle counterpose between shoulders and hips, one leg relaxed, flirtatious and confident posture defined by the silhouette, no facial details, empty background",
+        silhouette: {
+          facing: -0.25, shoulderTilt: 6, hipTilt: -6, waistX: -3, chestX: 0,
+          leftArm: "relaxed", rightArm: "hip", leftLeg: "crossBack", rightLeg: "straight", arch: 7, prop: "none"
+        }
+      },
+      {
+        id: "barra-lateral",
+        name: "Apoyada lateralmente en barra",
+        view: "perfil",
+        support: "barra",
+        posture: "de pie",
+        attitude: "desenfadada",
+        arch: "leve",
+        description: "Hombro y codo apoyados en una barra alta, cadera desplazada y rodilla adelantada.",
+        promptEs: "mujer adulta en silueta, vista lateral, apoyada con hombro y codo en una barra alta, cadera desplazada hacia un lado, rodilla delantera flexible, postura desenfadada y sugerente por la distribución del peso, solo silueta",
+        promptEn: "adult woman silhouette, side view, leaning with shoulder and elbow on a tall bar, hip shifted to one side, front knee relaxed, casual yet suggestive posture through weight distribution, silhouette only",
+        silhouette: {
+          facing: 1, shoulderTilt: -5, hipTilt: 8, waistX: 14, chestX: 10,
+          leftArm: "barLean", rightArm: "thigh", leftLeg: "step", rightLeg: "straight", arch: 9, prop: "bar"
+        }
+      },
+      {
+        id: "suelo-gato",
+        name: "En el suelo con arqueo suave",
+        view: "tres cuartos",
+        support: "suelo",
+        posture: "en el suelo",
+        attitude: "sutil",
+        arch: "medio",
+        description: "Apoyo sobre manos y rodillas con columna suave, cuello largo y cadera ligeramente elevada.",
+        promptEs: "mujer adulta en silueta, pose en el suelo, vista tres cuartos, apoyada en manos y rodillas, espalda con arqueo suave, cuello alargado, cadera ligeramente elevada, lenguaje corporal sutil y sugerente, solo silueta, sin desnudez explícita",
+        promptEn: "adult woman silhouette, floor pose, three-quarter view, on hands and knees, softly arched spine, elongated neck, hips slightly lifted, subtle and suggestive body language, silhouette only, no explicit nudity",
+        silhouette: {
+          facing: 0.55, shoulderTilt: -4, hipTilt: 12, waistX: 20, chestX: 18,
+          leftArm: "floorFront", rightArm: "floorBack", leftLeg: "kneelFrontWide", rightLeg: "kneelBackWide", arch: 14, prop: "floor"
+        }
+      },
+      {
+        id: "frontal-brazos-arriba",
+        name: "Frontal con brazos arriba",
+        view: "frontal",
+        support: "sin apoyo",
+        posture: "de pie",
+        attitude: "dominante",
+        arch: "leve",
+        description: "De pie con ambos brazos elevados, costillas abiertas y una pierna adelantada para marcar dinamismo.",
+        promptEs: "mujer adulta en silueta, vista frontal, de pie, ambos brazos elevados por encima de la cabeza, costillas abiertas, una pierna adelantada, peso repartido con actitud dominante y elegante, solo silueta, composición minimalista",
+        promptEn: "adult woman silhouette, front view, standing, both arms raised above the head, ribcage open, one leg slightly forward, balanced weight with dominant and elegant attitude, silhouette only, minimalist composition",
+        silhouette: {
+          facing: 0, shoulderTilt: -2, hipTilt: 3, waistX: 0, chestX: 0,
+          leftArm: "up", rightArm: "up", leftLeg: "step", rightLeg: "straight", arch: 6, prop: "none"
+        }
+      },
+      {
+        id: "perfil-pierna-elevada",
+        name: "Perfil con pierna elevada en apoyo",
+        view: "perfil",
+        support: "bloque",
+        posture: "de pie",
+        attitude: "atlética y sugerente",
+        arch: "medio",
+        description: "Una pierna elevada sobre bloque bajo, manos descansando sobre el muslo y torso inclinado con control.",
+        promptEs: "mujer adulta en silueta, vista de perfil, una pierna elevada sobre un bloque bajo, torso inclinado ligeramente hacia la pierna adelantada, manos apoyadas sobre el muslo, espalda con curva media, actitud atlética y sugerente basada en la postura",
+        promptEn: "adult woman silhouette, side view, one leg raised on a low block, torso leaning slightly toward the front leg, hands resting on the thigh, medium spinal curve, athletic and suggestive attitude expressed through posture",
+        silhouette: {
+          facing: 1, shoulderTilt: -6, hipTilt: 6, waistX: 14, chestX: 16,
+          leftArm: "frontTouch", rightArm: "frontTouch", leftLeg: "blockFront", rightLeg: "straight", arch: 10, prop: "block"
+        }
+      },
+      {
+        id: "espalda-sentada-suelo",
+        name: "Sentada en el suelo de espaldas",
+        view: "espalda",
+        support: "suelo",
+        posture: "sentada",
+        attitude: "serena",
+        arch: "suave",
+        description: "Sentada con una mano detrás para apoyo, rodillas dobladas hacia un lado y espalda larga.",
+        promptEs: "mujer adulta en silueta, sentada en el suelo vista de espaldas, una mano apoyada detrás del cuerpo, rodillas dobladas hacia un lado, espalda larga y cuello estirado, actitud serena y sugerente por composición corporal, solo silueta",
+        promptEn: "adult woman silhouette, seated on the floor in back view, one hand placed behind the body for support, knees folded to one side, long spine and stretched neck, serene and suggestive attitude through body composition, silhouette only",
+        silhouette: {
+          facing: -0.2, shoulderTilt: 4, hipTilt: -4, waistX: -8, chestX: -4,
+          leftArm: "seatBackSupport", rightArm: "lap", leftLeg: "seatFoldFront", rightLeg: "seatFoldBack", arch: 5, prop: "floor"
+        }
+      },
+      {
+        id: "pared-brazo-arriba",
+        name: "Pared con brazo elevado",
+        view: "tres cuartos",
+        support: "pared",
+        posture: "de pie",
+        attitude: "teatral",
+        arch: "medio",
+        description: "Una mano alta en pared, torso rotado, abdomen estirado y cadera desplazada.",
+        promptEs: "mujer adulta en silueta, vista tres cuartos, de pie junto a una pared, un brazo elevado apoyado arriba, torso ligeramente rotado, abdomen estirado, cadera desplazada, pose teatral y sugerente construida por líneas corporales, solo silueta",
+        promptEn: "adult woman silhouette, three-quarter view, standing next to a wall, one arm raised and placed high on the wall, torso slightly rotated, elongated abdomen, hip shifted outward, theatrical and suggestive pose built from body lines, silhouette only",
+        silhouette: {
+          facing: 0.45, shoulderTilt: -7, hipTilt: 8, waistX: 12, chestX: 8,
+          leftArm: "wallHigh", rightArm: "thigh", leftLeg: "straight", rightLeg: "soft", arch: 11, prop: "wall"
+        }
+      },
+      {
+        id: "taburete-reversa",
+        name: "Sentada a horcajadas en taburete",
+        view: "frontal",
+        support: "taburete",
+        posture: "sentada",
+        attitude: "desafiante",
+        arch: "leve",
+        description: "Sentada de frente en taburete con respaldo invertido, torso erguido y brazos descansando arriba.",
+        promptEs: "mujer adulta en silueta, sentada a horcajadas en taburete con respaldo invertido, vista frontal, torso erguido, brazos descansando sobre el respaldo, piernas abiertas de forma natural, actitud desafiante y segura, solo silueta",
+        promptEn: "adult woman silhouette, straddling a stool with the backrest reversed, front view, upright torso, arms resting on the backrest, legs naturally open, challenging and confident attitude, silhouette only",
+        silhouette: {
+          facing: 0, shoulderTilt: -1, hipTilt: 2, waistX: 0, chestX: 0,
+          leftArm: "stoolTop", rightArm: "stoolTop", leftLeg: "stoolLeft", rightLeg: "stoolRight", arch: 4, prop: "stool"
+        }
+      },
+      {
+        id: "perfil-caminar",
+        name: "Paso lento de perfil",
+        view: "perfil",
+        support: "sin apoyo",
+        posture: "caminando",
+        attitude: "ligera y segura",
+        arch: "suave",
+        description: "Perfil caminando despacio, cadera móvil, brazos sueltos y pecho abierto.",
+        promptEs: "mujer adulta en silueta, caminando lentamente de perfil, una pierna delante y otra detrás, brazos sueltos, pecho abierto, cadera móvil, postura ligera y segura, solo silueta, énfasis en la línea de movimiento",
+        promptEn: "adult woman silhouette, slow walking profile, one leg forward and one back, loose arms, open chest, active hip movement, light and confident posture, silhouette only, emphasis on motion line",
+        silhouette: {
+          facing: 1, shoulderTilt: -3, hipTilt: 4, waistX: 8, chestX: 8,
+          leftArm: "walkFront", rightArm: "walkBack", leftLeg: "walkFront", rightLeg: "walkBack", arch: 5, prop: "none"
+        }
+      },
+      {
+        id: "espalda-brazos-abiertos",
+        name: "Espalda con brazos abiertos",
+        view: "espalda",
+        support: "sin apoyo",
+        posture: "de pie",
+        attitude: "expansiva",
+        arch: "leve",
+        description: "Vista trasera con brazos separados del cuerpo, peso centrado y caja torácica abierta.",
+        promptEs: "mujer adulta en silueta, vista de espaldas, de pie, brazos abiertos ligeramente separados del cuerpo, peso centrado, caja torácica abierta, cuello largo, postura expansiva y seductora solo por la forma corporal, sin detalles de rostro",
+        promptEn: "adult woman silhouette, back view, standing, arms slightly open away from the body, centered weight, open ribcage, long neck, expansive and seductive posture communicated only by body shape, no facial detail",
+        silhouette: {
+          facing: 0, shoulderTilt: 2, hipTilt: -1, waistX: 0, chestX: 0,
+          leftArm: "open", rightArm: "open", leftLeg: "straight", rightLeg: "soft", arch: 6, prop: "none"
+        }
+      } 
+    ];
 
-  <!-- Botón flotante de pausa/reanudar -->
-  <button class="fab" id="btnPauseFab" aria-label="Pausar">⏸️</button>
+    const grid = document.getElementById('poseGrid');
+    const detailPanel = document.getElementById('detailPanel');
+    const searchInput = document.getElementById('searchInput');
+    const viewFilter = document.getElementById('viewFilter');
+    const supportFilter = document.getElementById('supportFilter');
+    const postureFilter = document.getElementById('postureFilter');
+    const visibleCount = document.getElementById('visibleCount');
+    const totalCount = document.getElementById('totalCount');
+    const selectedName = document.getElementById('selectedName');
+    const resetFilters = document.getElementById('resetFilters');
 
-  <!-- Ayuda -->
-  <dialog id="dlgHelp">
-    <h3 style="margin:0 0 8px 0">Cómo va esto (versión casera)</h3>
-    <p style="margin:.5em 0 0 0">• Juegan <strong>2 personas</strong>. Cada uno tiene su rosco.</p>
-    <p style="margin:.25em 0">• Te leeré la pista (“Con la B: …”). Si sabes la palabra, <strong>Respóndela</strong>.</p>
-    <p style="margin:.25em 0">• ¿No la sabes? Pulsa <strong>Pasapalabra</strong> y pasa turno.</p>
-    <p style="margin:.25em 0">• ¿Miedo a perder tiempo escribiendo? Usa <strong>✍️ Escribir (pausar)</strong>:
-      congela tu tiempo mientras tecleas y se reanuda al enviar.</p>
-    <p style="margin:.25em 0">• <strong>Pausar</strong> congela TODO (por si llaman a la puerta).</p>
-    <p style="margin:.25em 0">• Gana quien tenga más aciertos; si empatan, <em>menos fallos</em>.</p>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
-      <button class="btn btn-ghost" id="btnCloseHelp">Cerrar</button>
-    </div>
-  </dialog>
+    let selectedPoseId = poses[0].id;
 
-  <!-- Ajustes -->
-  <dialog id="dlg">
-    <h3 style="margin:0 0 8px 0">Ajustes</h3>
-    <div class="row" style="display:flex;align-items:center;gap:10px;margin:10px 0">
-      <label for="rngTime" style="min-width:160px">Segundos por jugador</label>
-      <input id="rngTime" type="range" min="95" max="180" step="5" value="145" style="flex:1" />
-      <span class="val" id="valTime">145 s</span>
-    </div>
-    <div class="row" style="display:flex;align-items:center;gap:10px;margin:8px 0">
-      <input id="chkTTS" type="checkbox" checked /> <label for="chkTTS">Leer definiciones (TTS)</label>
-    </div>
-    <div class="row" style="display:flex;align-items:center;gap:10px;margin:8px 0">
-      <input id="chkSTT" type="checkbox" /> <label for="chkSTT">Responder por voz (si el navegador lo soporta)</label>
-    </div>
-    <div class="row" style="display:flex;align-items:center;gap:10px;margin:8px 0">
-      <input id="chkFuzzy" type="checkbox" checked /> <label for="chkFuzzy">Permitir un error ortográfico leve</label>
-    </div>
-    <div class="row" style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px">
-      <button class="btn btn-ghost" id="btnCancel">Cerrar</button>
-      <button class="btn btn-primary" id="btnApply">Aplicar</button>
-    </div>
-    <p style="margin-top:10px;font-size:12px;color:#9aa3b2">El micro va mejor en Chrome Android y requiere HTTPS (ej: Netlify/GitHub Pages).</p>
-  </dialog>
+    function uniqueValues(key){
+      return [...new Set(poses.map((pose) => pose[key]))].sort((a,b) => a.localeCompare(b, 'es'));
+    }
 
-<script>
-(function(){
-  const LETTERS=["A","B","C","D","E","F","G","H","I","J","L","M","N","Ñ","O","P","Q","R","S","T","U","V","X","Y","Z"];
+    function populateSelect(select, values){
+      values.forEach((value) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value.charAt(0).toUpperCase() + value.slice(1);
+        select.appendChild(option);
+      });
+    }
 
-  const state={
-    rosco:{A:[],B:[]}, idx:{A:0,B:0}, time:{A:145,B:145},
-    active:'A', running:false, finished:false, paused:false,
-    tts:true, stt:false, fuzzy:true, recognizer:null, voice:null, timer:null,
-    typingHold:false
-  };
+    populateSelect(viewFilter, uniqueValues('view'));
+    populateSelect(supportFilter, uniqueValues('support'));
+    populateSelect(postureFilter, uniqueValues('posture'));
 
-  // Helpers
-  const $=sel=>document.querySelector(sel);
-  function normalize(s){return (s||"").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}
-  function fmtTime(s){const m=String(Math.floor(s/60)).padStart(2,'0');const ss=String(Math.floor(s%60)).padStart(2,'0');return `${m}:${ss}`;}
-  function pick(n,arr){const c=[...arr];for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];}return c.slice(0,n);}
-  // Levenshtein correcto (1D)
-  function lev(a,b){
-    const m=a.length,n=b.length; const dp=new Array(n+1);
-    for(let j=0;j<=n;j++) dp[j]=j;
-    for(let i=1;i<=m;i++){
-      let prev=dp[0]; dp[0]=i;
-      for(let j=1;j<=n;j++){
-        const tmp=dp[j]; const cost=(a[i-1]===b[j-1])?0:1;
-        dp[j]=Math.min(dp[j]+1, dp[j-1]+1, prev+cost);
-        prev=tmp;
+    function circle(cx, cy, r, className = 'fill'){
+      return `<circle class="${className}" cx="${cx}" cy="${cy}" r="${r}" />`;
+    }
+
+    function line(points, className = 'stroke'){
+      return `<path class="${className}" d="M ${points.map((p) => `${p[0]} ${p[1]}`).join(' L ')}" />`;
+    }
+
+    function drawProp(type){
+      switch(type){
+        case 'wall':
+          return '<line class="ground" x1="150" y1="20" x2="150" y2="290" />';
+        case 'table':
+          return '<rect class="prop" x="30" y="120" width="120" height="12" rx="6" /><line class="ground" x1="45" y1="132" x2="45" y2="260" /><line class="ground" x1="135" y1="132" x2="135" y2="260" />';
+        case 'chair':
+          return '<rect class="prop" x="68" y="145" width="78" height="10" rx="5" /><line class="ground" x1="78" y1="155" x2="78" y2="255" /><line class="ground" x1="136" y1="155" x2="136" y2="255" /><line class="ground" x1="143" y1="100" x2="143" y2="145" />';
+        case 'floor':
+          return '<line class="ground" x1="30" y1="260" x2="180" y2="260" />';
+        case 'divan':
+          return '<rect class="prop" x="35" y="185" width="130" height="20" rx="10" /><line class="ground" x1="48" y1="205" x2="48" y2="250" /><line class="ground" x1="150" y1="205" x2="150" y2="250" />';
+        case 'bar':
+          return '<line class="ground" x1="150" y1="40" x2="150" y2="250" /><line class="ground" x1="138" y1="40" x2="162" y2="40" />';
+        case 'block':
+          return '<rect class="prop" x="110" y="205" width="46" height="26" rx="6" />';
+        case 'stool':
+          return '<rect class="prop" x="80" y="108" width="50" height="10" rx="5" /><line class="ground" x1="87" y1="118" x2="87" y2="245" /><line class="ground" x1="123" y1="118" x2="123" y2="245" /><line class="ground" x1="105" y1="80" x2="105" y2="108" />';
+        default:
+          return '';
       }
     }
-    return dp[n];
-  }
-  function tolerantEqual(ans,val){ if(ans===val) return true; if(!state.fuzzy) return false; const d=lev(ans,val); return d<=1 && Math.max(ans.length,val.length)>=5;}
 
-  // Banco (muestra; amplíalo cuando quieras)
-  const BANK={
-    A:[{a:"abstinencia",c:"Privación voluntaria de consumir o hacer algo, especialmente alcohol o drogas.",d:7},{a:"anacronismo",c:"Error por situar algo fuera de su época.",d:7},{a:"arcano",c:"Secreto o cosa misteriosa de difícil comprensión.",d:7}],
-    B:[{a:"barometro",c:"Aparato que mide la presión atmosférica.",d:7},{a:"bitacora",c:"Cuaderno de navegación; por extensión, diario o blog.",d:7},{a:"bonanza",c:"Período de prosperidad o calma.",d:7}],
-    C:[{a:"cautela",c:"Actitud de prudencia para evitar riesgos.",d:7},{a:"catarata",c:"Salto de agua grande; también opacidad del cristalino.",d:7},{a:"cisma",c:"División o rompimiento en una organización.",d:7}],
-    D:[{a:"diligencia",c:"Cuidado y rapidez en ejecutar algo.",d:7},{a:"desidia",c:"Descuido y pereza en el cumplimiento de obligaciones.",d:7},{a:"diatriba",c:"Discurso o escrito violento y ofensivo.",d:9}],
-    E:[{a:"epilogo",c:"Parte final de una obra donde se comenta o cierra lo anterior.",d:7},{a:"efimero",c:"De corta duración, pasajero.",d:7},{a:"eclectico",c:"Que combina elementos de distintas tendencias.",d:7}],
-    F:[{a:"falaz",c:"Dicho de un razonamiento: aparente y engañoso.",d:7},{a:"frugal",c:"Sencillo en la comida o el gasto; moderado.",d:7},{a:"fertil",c:"Que produce en abundancia.",d:7}],
-    G:[{a:"glaciar",c:"Gran masa de hielo que se desplaza lentamente.",d:7},{a:"gravamen",c:"Carga u obligación tributaria que grava bienes o rentas.",d:9},{a:"gregario",c:"Dicho de un animal: que vive en grupo.",d:7}],
-    H:[{a:"hecatombe",c:"Suceso trágico con gran destrucción o mortandad.",d:7},{a:"hibernar",c:"Pasar el invierno en reposo, reduciendo actividad vital.",d:7},{a:"hosco",c:"Ceñudo, de mal humor.",d:7}],
-    I:[{a:"ignifugo",c:"Dicho de un material: que no arde o resiste el fuego.",d:7},{a:"inercia",c:"Resistencia de un cuerpo a modificar su estado de movimiento.",d:7},{a:"inedito",c:"No publicado.",d:7}],
-    J:[{a:"jazmin",c:"Planta trepadora de flores aromáticas.",d:7},{a:"jornada",c:"Día de trabajo o conjunto de horas dedicadas a una actividad.",d:7},{a:"jocoso",c:"Gracioso, festivo.",d:7}],
-    L:[{a:"lexico",c:"Conjunto de palabras de una lengua; vocabulario.",d:7},{a:"lobrego",c:"Oscuro, tétrico, triste.",d:9},{a:"laconico",c:"Breve, conciso.",d:7}],
-    M:[{a:"madriguera",c:"Refugio subterráneo de ciertos animales.",d:7},{a:"mitomano",c:"Persona con tendencia patológica a mentir.",d:7},{a:"magnanimo",c:"Generoso de ánimo noble.",d:7}],
-    N:[{a:"nebulosa",c:"Nube interestelar de gas y polvo donde pueden nacer estrellas.",d:7},{a:"nadir",c:"Punto opuesto al cenit en la esfera celeste.",d:9},{a:"nemesis",c:"Rival o agente de retribución.",d:7}],
-    "Ñ":[{a:"arana",c:"Arácnido que teje telas para capturar presas. (contiene Ñ)",d:7},{a:"anorar",c:"Echar de menos con intensidad. (contiene Ñ)",d:7},{a:"canizo",c:"Enrejado hecho de cañas. (contiene Ñ)",d:9}],
-    O:[{a:"osamenta",c:"Conjunto de huesos del cuerpo de un animal.",d:7},{a:"osmosis",c:"Paso de solvente a través de una membrana semipermeable.",d:7},{a:"oprobio",c:"Deshonra o vergüenza pública.",d:9}],
-    P:[{a:"paradoja",c:"Afirmación que parece contradictoria pero encierra verdad.",d:7},{a:"pleonasmo",c:"Redundancia como en ‘subir arriba’.",d:9},{a:"perenne",c:"Que dura mucho tiempo o es continuo.",d:7}],
-    Q:[{a:"quimera",c:"Ilusión imposible o monstruo mitológico.",d:7},{a:"querencia",c:"Inclinación o apego a un lugar al que se vuelve.",d:9},{a:"querella",c:"Disputa o demanda judicial.",d:7}],
-    R:[{a:"resiliencia",c:"Capacidad de adaptarse a la adversidad y recuperarse.",d:7},{a:"refran",c:"Dicho breve y sentencioso de uso popular.",d:7},{a:"retorica",c:"Arte de hablar o escribir de forma persuasiva.",d:7}],
-    S:[{a:"sigilo",c:"Secreto o reserva para no ser oído.",d:7},{a:"saeta",c:"Canto religioso popular de Semana Santa; también flecha.",d:7},{a:"somero",c:"Superficial, poco profundo.",d:7}],
-    T:[{a:"taciturno",c:"Persona de carácter callado y melancólico.",d:7},{a:"tedio",c:"Aburrimiento profundo.",d:7},{a:"tenaz",c:"Persistente, firme en un propósito.",d:7}],
-    U:[{a:"utopia",c:"Proyecto ideal y deseable pero de realización imposible.",d:7},{a:"ufano",c:"Satisfecho u orgulloso de sí mismo.",d:7},{a:"ubicuo",c:"Que está en muchos lugares al mismo tiempo (fig.).",d:7}],
-    V:[{a:"verosimil",c:"Que parece verdadero o creíble.",d:7},{a:"voraz",c:"Que come con mucha ansia; muy ávido.",d:7},{a:"vehemente",c:"Apasionado, impetuoso.",d:7}],
-    X:[{a:"axila",c:"Cavidad situada bajo el brazo. (contiene X)",d:7},{a:"exiguo",c:"Muy escaso, insuficiente. (contiene X)",d:9},{a:"oxigeno",c:"Gas necesario para la respiración. (contiene X)",d:7}],
-    Y:[{a:"yodo",c:"Elemento químico usado como antiséptico en solución.",d:7},{a:"yegua",c:"Hembra del caballo.",d:7},{a:"yermo",c:"Tierra inculta o despoblada.",d:7}],
-    Z:[{a:"zigzag",c:"Línea quebrada formada por segmentos alternos.",d:7},{a:"zarcillo",c:"Tallo fino con que se agarran algunas plantas trepadoras.",d:9},{a:"zoquete",c:"Persona torpe o ruda.",d:7}]
-  };
+    function point(baseX, baseY, dx, dy){
+      return [baseX + dx, baseY + dy];
+    }
 
-  // TTS
-  function speak(text){
-    try{
-      if(!state.tts||!('speechSynthesis'in window)||state.paused) return;
-      const u=new SpeechSynthesisUtterance(text);
-      u.lang='es-ES'; if(state.voice)u.voice=state.voice;
-      window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
-    }catch(e){}
-  }
-  function pickSpanishVoice(){
-    if(!('speechSynthesis'in window))return;
-    const vs=window.speechSynthesis.getVoices();
-    state.voice=vs.find(v=>v.lang&&v.lang.toLowerCase().startsWith('es'))||vs[0]||null;
-  }
-  if('speechSynthesis'in window){window.speechSynthesis.onvoiceschanged=pickSpanishVoice;pickSpanishVoice();}
+    function createBody(config){
+      const centerX = 105 + (config.waistX || 0);
+      const pelvisY = 140;
+      const chestX = 105 + (config.chestX || 0);
+      const shoulderY = 94 + (config.shoulderTilt || 0);
+      const headX = chestX + (config.facing * 7 || 0);
+      const hipTilt = config.hipTilt || 0;
+      const arch = config.arch || 0;
 
-  // STT
-  function initSTT(){
-    const SR=window.SpeechRecognition||window.webkitSpeechRecognition; if(!SR) return null;
-    const rec=new SR(); rec.lang='es-ES'; rec.interimResults=false; rec.maxAlternatives=1;
-    rec.onresult=(ev)=>{const txt=normalize(ev.results[0][0].transcript);
-      if(txt.includes('pasapalabra')||txt==='paso'||txt==='paso palabra'){doPass();return;}
-      $('#answer').value=txt; submitAnswer();
-    };
-    return rec;
-  }
+      const neck = [headX, 64];
+      const shoulderL = point(chestX, shoulderY, -28, -3);
+      const shoulderR = point(chestX, shoulderY, 28, 3);
+      const rib = [chestX, 114 - arch * 0.15];
+      const waist = [centerX, 138 + arch * 0.08];
+      const hipL = point(centerX, pelvisY, -23, hipTilt * 0.4);
+      const hipR = point(centerX, pelvisY, 23, -hipTilt * 0.4);
 
-  // Generación de roscos
-  function makeRoscos(){
-    const A=[],B=[]; LETTERS.forEach((L,i)=>{
-      const pool=BANK[L];
-      let picks=pick(2, pool.length>=2?pool:pool.concat(pool[0]));
-      if(picks[0]===picks[1]) picks[1]=pool[(pool.indexOf(picks[0])+1)%pool.length];
-      const hue=(i*(360/LETTERS.length));
-      A.push({letter:L,clue:picks[0].c,answer:picks[0].a,diff:picks[0].d,status:'pending',hue});
-      B.push({letter:L,clue:picks[1].c,answer:picks[1].a,diff:picks[1].d,status:'pending',hue});
-    }); ensureHard(A); ensureHard(B); return {A,B};
-  }
-  function ensureHard(rosco){
-    for(let i=0;i<rosco.length&&rosco.filter(x=>x.diff===9).length<5;i++){
-      const L=rosco[i].letter; const hp=BANK[L].filter(x=>x.d===9);
-      if(hp.length){const p=hp[Math.floor(Math.random()*hp.length)];
-        rosco[i].clue=p.c; rosco[i].answer=p.a; rosco[i].diff=9;
+      const armMap = {
+        relaxed: [[0,0],[6,28],[2,62]],
+        hip: [[0,0],[8,22],[-3,42]],
+        thigh: [[0,0],[10,26],[8,58]],
+        up: [[0,0],[6,-30],[12,-58]],
+        open: [[0,0],[-18,18],[-28,40]],
+        wall: [[0,0],[16,16],[28,8]],
+        wallHigh: [[0,0],[16,-18],[24,-52]],
+        frontTouch: [[0,0],[16,18],[20,48]],
+        backLine: [[0,0],[-8,20],[-18,42]],
+        table: [[0,0],[18,26],[36,30]],
+        lap: [[0,0],[10,20],[4,40]],
+        chairSide: [[0,0],[14,18],[18,44]],
+        barLean: [[0,0],[18,8],[30,-2]],
+        floorFront: [[0,0],[18,28],[34,50]],
+        floorBack: [[0,0],[-2,28],[6,54]],
+        reclineSupport: [[0,0],[-20,24],[-36,44]],
+        seatBackSupport: [[0,0],[-18,22],[-26,46]],
+        stoolTop: [[0,0],[12,12],[12,24]],
+        walkFront: [[0,0],[12,18],[14,44]],
+        walkBack: [[0,0],[-8,18],[-16,44]]
+      };
+
+      const legMap = {
+        straight: [[0,0],[-4,48],[-2,96]],
+        soft: [[0,0],[8,42],[4,88]],
+        step: [[0,0],[16,40],[30,86]],
+        crossBack: [[0,0],[-14,40],[-20,88]],
+        backLong: [[0,0],[20,46],[40,94]],
+        backSoft: [[0,0],[8,48],[20,92]],
+        crossSeat: [[0,0],[18,28],[38,42]],
+        seatBase: [[0,0],[-4,26],[10,42]],
+        kneelFront: [[0,0],[8,26],[16,46]],
+        kneelBack: [[0,0],[-2,26],[14,48]],
+        reclineLong: [[0,0],[36,12],[72,10]],
+        reclineTop: [[0,0],[34,-2],[62,-10]],
+        kneelFrontWide: [[0,0],[22,34],[36,60]],
+        kneelBackWide: [[0,0],[6,36],[14,62]],
+        blockFront: [[0,0],[18,32],[36,66]],
+        seatFoldFront: [[0,0],[20,24],[30,36]],
+        seatFoldBack: [[0,0],[0,24],[14,38]],
+        stoolLeft: [[0,0],[-16,44],[-14,92]],
+        stoolRight: [[0,0],[16,44],[14,92]],
+        walkFront: [[0,0],[16,42],[34,88]],
+        walkBack: [[0,0],[-12,40],[-26,86]]
+      };
+
+      const leftArmBase = config.leftArm || 'relaxed';
+      const rightArmBase = config.rightArm || 'relaxed';
+      const leftLegBase = config.leftLeg || 'straight';
+      const rightLegBase = config.rightLeg || 'soft';
+
+      const leftArm = armMap[leftArmBase].map(([dx,dy]) => [shoulderL[0] - dx, shoulderL[1] + dy]);
+      const rightArm = armMap[rightArmBase].map(([dx,dy]) => [shoulderR[0] + dx, shoulderR[1] + dy]);
+      const leftLeg = legMap[leftLegBase].map(([dx,dy]) => [hipL[0] - dx, hipL[1] + dy]);
+      const rightLeg = legMap[rightLegBase].map(([dx,dy]) => [hipR[0] + dx, hipR[1] + dy]);
+
+      return `
+        ${circle(headX, 42, 18)}
+        ${line([neck, rib, waist], 'stroke')}
+        ${line([shoulderL, rib, shoulderR], 'thin')}
+        ${line([hipL, waist, hipR], 'thin')}
+        ${line(leftArm, 'stroke')}
+        ${line(rightArm, 'stroke')}
+        ${line([rib, [rib[0], rib[1] + 18], waist], 'thin')}
+        ${line(leftLeg, 'stroke')}
+        ${line(rightLeg, 'stroke')}
+      `;
+    }
+
+    function renderSilhouette(config){
+      return `
+        <svg class="silhouette" viewBox="0 0 210 280" aria-hidden="true" role="img">
+          ${drawProp(config.prop)}
+          ${createBody(config)}
+        </svg>
+      `;
+    }
+
+    function filteredPoses(){
+      const query = searchInput.value.trim().toLowerCase();
+      return poses.filter((pose) => {
+        const matchesQuery = !query || [pose.name, pose.description, pose.view, pose.support, pose.posture, pose.attitude].join(' ').toLowerCase().includes(query);
+        const matchesView = viewFilter.value === 'all' || pose.view === viewFilter.value;
+        const matchesSupport = supportFilter.value === 'all' || pose.support === supportFilter.value;
+        const matchesPosture = postureFilter.value === 'all' || pose.posture === postureFilter.value;
+        return matchesQuery && matchesView && matchesSupport && matchesPosture;
+      });
+    }
+
+    function renderGrid(){
+      const list = filteredPoses();
+      visibleCount.textContent = list.length;
+      totalCount.textContent = poses.length;
+
+      if (!list.some((pose) => pose.id === selectedPoseId) && list.length) {
+        selectedPoseId = list[0].id;
+      }
+      if (!list.length) {
+        selectedName.textContent = '—';
+        grid.innerHTML = '<div class="empty">No hay poses que coincidan con los filtros actuales. Prueba otro ángulo, tipo de apoyo o una búsqueda más amplia.</div>';
+        detailPanel.innerHTML = '<p class="lead">No hay una pose seleccionada porque el filtro actual no devuelve resultados.</p>';
+        return;
+      }
+
+      grid.innerHTML = list.map((pose) => `
+        <article class="card ${pose.id === selectedPoseId ? 'active' : ''}">
+          <div class="card-top">
+            <div>
+              <h3>${pose.name}</h3>
+              <div class="meta">
+                <span>${pose.view}</span>
+                <span>${pose.support}</span>
+                <span>${pose.posture}</span>
+              </div>
+            </div>
+          </div>
+          ${renderSilhouette(pose.silhouette)}
+          <p>${pose.description}</p>
+          <button class="select-btn" data-select="${pose.id}">Ver prompt</button>
+        </article>
+      `).join('');
+
+      renderDetail();
+    }
+
+    function renderDetail(){
+      const pose = poses.find((item) => item.id === selectedPoseId);
+      if (!pose) return;
+      selectedName.textContent = pose.name;
+      detailPanel.innerHTML = `
+        <div class="detail-header">
+          <div>
+            <h2>${pose.name}</h2>
+            <div class="meta">
+              <span>${pose.view}</span>
+              <span>${pose.support}</span>
+              <span>${pose.posture}</span>
+              <span>${pose.attitude}</span>
+            </div>
+          </div>
+        </div>
+        <div class="detail-preview">
+          ${renderSilhouette(pose.silhouette)}
+        </div>
+        <p class="lead">${pose.description}</p>
+        <div class="detail-list">
+          <div class="detail-item">
+            <small>Vista</small>
+            <strong>${pose.view}</strong>
+          </div>
+          <div class="detail-item">
+            <small>Tipo de apoyo</small>
+            <strong>${pose.support}</strong>
+          </div>
+          <div class="detail-item">
+            <small>Actitud</small>
+            <strong>${pose.attitude}</strong>
+          </div>
+          <div class="detail-item">
+            <small>Arqueo</small>
+            <strong>${pose.arch}</strong>
+          </div>
+        </div>
+        <div class="prompt-box">
+          <small class="tag">Prompt ES</small>
+          <pre>${pose.promptEs}</pre>
+        </div>
+        <div class="prompt-box">
+          <small class="tag">Prompt EN</small>
+          <pre>${pose.promptEn}</pre>
+        </div>
+        <div class="prompt-actions">
+          <button class="copy-btn" data-copy="es">Copiar prompt ES</button>
+          <button class="copy-btn" data-copy="en">Copiar prompt EN</button>
+          <button class="ghost-btn" data-copy="both">Copiar ambos</button>
+        </div>
+        <p class="hint">La app está planteada para describir únicamente la postura corporal. Si después quieres, se le pueden añadir modificadores de cámara, iluminación, estilización o composición.</p>
+        <p class="status" id="copyStatus"></p>
+      `;
+    }
+
+    async function copyPrompt(mode){
+      const pose = poses.find((item) => item.id === selectedPoseId);
+      if (!pose) return;
+      const copyStatus = document.getElementById('copyStatus');
+      const value = mode === 'es'
+        ? pose.promptEs
+        : mode === 'en'
+          ? pose.promptEn
+          : `ES:\n${pose.promptEs}\n\nEN:\n${pose.promptEn}`;
+
+      try {
+        await navigator.clipboard.writeText(value);
+        copyStatus.textContent = 'Prompt copiado al portapapeles.';
+      } catch (error) {
+        copyStatus.textContent = 'No se pudo copiar automáticamente. Puedes seleccionar el texto manualmente.';
       }
     }
-  }
 
-  // Pintado del aro
-  function ringLayout(el,side){
-    el.innerHTML='';
-    const n=state.rosco[side].length, r=46;
-    for(let i=0;i<n;i++){
-      const it=state.rosco[side][i];
-      const a=(i/n)*Math.PI*2-Math.PI/2;
-      const x=50+Math.cos(a)*r, y=50+Math.sin(a)*r;
-      const d=document.createElement('div'); d.className='dot'; d.dataset.letter=it.letter;
-      d.style.left=x+'%'; d.style.top=y+'%';
-      const hue=it.hue||((i*360/n)|0);
-      d.style.background = `linear-gradient(hsl(${hue} 80% 65%), hsl(${hue} 70% 55%))`;
-      d.style.borderColor = `hsl(${hue} 70% 60% / .9)`;
-      if(it.status==='ok'){ d.classList.add('ok'); d.style.background=''; }
-      else if(it.status==='bad'){ d.classList.add('bad'); d.style.background=''; }
-      if(i===state.idx[side]&&state.active===side) d.classList.add('active');
-      el.appendChild(d);
-    }
-  }
-
-  function render(){
-    ringLayout($('#rA'),'A'); ringLayout($('#rB'),'B');
-    ['A','B'].forEach(s=>{
-      $(s==='A'?'#aOK':'#bOK').textContent=state.rosco[s].filter(x=>x.status==='ok').length;
-      $(s==='A'?'#aBAD':'#bBAD').textContent=state.rosco[s].filter(x=>x.status==='bad').length;
-      $(s==='A'?'#aPEN':'#bPEN').textContent=state.rosco[s].filter(x=>x.status==='pending').length;
-      $(s==='A'?'#tA':'#tB').textContent=fmtTime(state.time[s]);
+    [searchInput, viewFilter, supportFilter, postureFilter].forEach((element) => {
+      element.addEventListener('input', renderGrid);
+      element.addEventListener('change', renderGrid);
     });
-    $('#btnMic').disabled=!state.stt||state.paused;
-    ['#btnAnswer','#btnPass','#btnGiveUp'].forEach(id=>$(id).disabled=state.paused);
-    $('#btnPause').textContent=state.paused?'Reanudar':'Pausar';
-    $('#btnPauseFab').textContent=state.paused?'▶️':'⏸️';
-    $('#btnPauseFab').setAttribute('aria-label',state.paused?'Reanudar':'Pausar');
-    $('#btnWrite').classList.toggle('active', state.typingHold);
-  }
 
-  function labelFor(letter){
-    if(letter==='Ñ') return 'Contiene eñe';
-    if(letter==='X') return 'Contiene equis';
-    if(letter==='Q') return 'Con la cu';
-    if(letter==='Y') return 'Con la ye';
-    return `Con la ${letter.toLowerCase()}`;
-  }
+    resetFilters.addEventListener('click', () => {
+      searchInput.value = '';
+      viewFilter.value = 'all';
+      supportFilter.value = 'all';
+      postureFilter.value = 'all';
+      selectedPoseId = poses[0].id;
+      renderGrid();
+    });
 
-  function setClue(){
-    const side=state.active, i=state.idx[side];
-    $('#turnTag').textContent=`Turno: Jugador ${side}`;
-    if(i===-1){switchTurn();return;}
-    const item=state.rosco[side][i];
-    const text=`${labelFor(item.letter)}: ${item.clue}`;
-    $('#clue').textContent=text;
-    ringLayout($(state.active==='A'?'#rA':'#rB'),side);
-    speak(text);
-  }
-
-  function start(){
-    if(state.running||state.finished) return;
-    state.running=true; state.paused=false; $('#btnStart').disabled=true;
-    ['#btnAnswer','#btnPass','#btnGiveUp'].forEach(id=>$(id).disabled=false);
-    $('#answer').focus();
-    if(state.stt&&!state.recognizer){ state.recognizer=initSTT(); }
-    if(state.timer) clearInterval(state.timer);
-    state.timer=setInterval(()=>{
-      if(!state.running||state.paused||state.typingHold) return; // NO baja si “Escribir” está activo
-      const s=state.active;
-      if(state.time[s]>0){
-        state.time[s]-=1; $(s==='A'?'#tA':'#tB').textContent=fmtTime(state.time[s]);
-        if(state.time[s]===0){ switchTurn(); }
+    document.addEventListener('click', (event) => {
+      const selectButton = event.target.closest('[data-select]');
+      const copyButton = event.target.closest('[data-copy]');
+      if (selectButton) {
+        selectedPoseId = selectButton.dataset.select;
+        renderGrid();
+        return;
       }
-      if(state.time.A===0&&state.time.B===0){ endGame(); }
-    },1000);
-    setClue();
-  }
+      if (copyButton) {
+        copyPrompt(copyButton.dataset.copy);
+      }
+    });
 
-  function pauseToggle(force){
-    const want=(typeof force==='boolean')? force : !state.paused;
-    state.paused=want; $('#ovPause').style.display=state.paused?'grid':'none';
-    try{ if(state.paused){ if('speechSynthesis'in window) window.speechSynthesis.cancel(); if(state.recognizer) state.recognizer.abort(); } }catch(e){}
-    render();
-  }
-  $('#btnResume').onclick=()=>pauseToggle(false);
-
-  // “Escribir (pausar)”: congela el cronómetro mientras tecleas
-  function toggleTypingHold(on){
-    const next = (typeof on==='boolean')? on : !state.typingHold;
-    state.typingHold = next;
-    if(next){
-      try{ if('speechSynthesis'in window) window.speechSynthesis.cancel(); if(state.recognizer) state.recognizer.abort(); }catch(e){}
-      $('#answer').focus();
-    }
-    render();
-  }
-
-  function switchTurn(){
-    const s=state.active;
-    state.idx[s]=state.rosco[s].findIndex(x=>x.status==='pending');
-    state.active=(s==='A')?'B':'A';
-    state.idx[state.active]=state.rosco[state.active].findIndex(x=>x.status==='pending');
-    setClue();
-  }
-
-  function submitAnswer(){
-    if(!state.running||state.finished) return;
-    const s=state.active, i=state.idx[s]; if(i===-1){switchTurn();return;}
-    const item=state.rosco[s][i];
-    const val=normalize($('#answer').value); $('#answer').value='';
-    if(state.typingHold) toggleTypingHold(false); // al responder, reanuda
-    if(!val){ doPass(); return; }
-    item.status = tolerantEqual(normalize(item.answer),val)?'ok':'bad';
-    render();
-    if(state.rosco[s].every(x=>x.status==='ok')){ endGame({forceWinner:s,reason:'completo'}); return; }
-    switchTurn();
-  }
-
-  function doPass(){
-    if(!state.running||state.finished) return;
-    if(state.typingHold) toggleTypingHold(false);
-    switchTurn();
-  }
-
-  function markFail(){
-    if(!state.running||state.finished) return;
-    const s=state.active,i=state.idx[s]; if(i===-1){switchTurn();return;}
-    if(state.typingHold) toggleTypingHold(false);
-    state.rosco[s][i].status='bad'; render(); switchTurn();
-  }
-
-  function endGame(opts={}){
-    state.finished=true; state.running=false; if(state.timer) clearInterval(state.timer);
-    const Aok=state.rosco.A.filter(x=>x.status==='ok').length, Bok=state.rosco.B.filter(x=>x.status==='ok').length;
-    const Abad=state.rosco.A.filter(x=>x.status==='bad').length, Bbad=state.rosco.B.filter(x=>x.status==='bad').length;
-    let w=null, detail='';
-    if(opts.forceWinner){ w=opts.forceWinner; detail='Completó el rosco'; }
-    else { if(Aok>Bok) w='A'; else if(Bok>Aok) w='B'; else { if(Abad<Bbad) w='A'; else if(Bbad<Abad) w='B'; else w='empate'; } }
-    const R=$('#result'); R.style.display='block';
-    R.innerHTML = (w==='empate')
-      ? `<strong>Empate técnico.</strong> Aciertos: A ${Aok} / B ${Bok}. Fallos: A ${Abad} / B ${Bbad}.`
-      : `<strong>Gana el Jugador ${w}</strong> · Aciertos A ${Aok} / B ${Bok} · Fallos A ${Abad} / B ${Bbad}${detail?` · ${detail}`:''}`;
-    ['#btnAnswer','#btnPass','#btnGiveUp','#btnMic'].forEach(id=>$(id).disabled=true);
-  }
-
-  function newGame(){
-    const r=makeRoscos();
-    state.rosco.A=r.A; state.rosco.B=r.B;
-    state.idx.A=0; state.idx.B=0;
-    state.active='A'; state.finished=false; state.running=false; state.paused=false; state.typingHold=false;
-    $('#btnStart').disabled=false; $('#ovPause').style.display='none';
-    render(); setClue();
-  }
-
-  // Ajustes y ayuda
-  const dlg=$('#dlg'), dlgHelp=$('#dlgHelp');
-  $('#btnSettings').onclick=()=>{ $('#rngTime').value=state.time.A; $('#valTime').textContent=state.time.A+' s';
-    $('#chkTTS').checked=state.tts; $('#chkSTT').checked=state.stt; $('#chkFuzzy').checked=state.fuzzy; dlg.showModal(); };
-  $('#btnCancel').onclick=()=>dlg.close();
-  $('#rngTime').oninput=e=>$('#valTime').textContent=e.target.value+' s';
-  $('#btnApply').onclick=()=>{ const secs=parseInt($('#rngTime').value,10);
-    state.time.A=secs; state.time.B=secs;
-    state.tts=$('#chkTTS').checked; state.stt=$('#chkSTT').checked; state.fuzzy=$('#chkFuzzy').checked;
-    if(state.stt&&!state.recognizer){ state.recognizer=initSTT(); }
-    $('#supportNote').textContent = state.stt ? (state.recognizer ? 'Voz activada. Si no te escucha, concede permiso al micro.' : 'Tu navegador no soporta reconocimiento de voz.') : '';
-    render(); dlg.close(); };
-  $('#btnHelp').onclick=()=>dlgHelp.showModal();
-  $('#btnCloseHelp').onclick=()=>dlgHelp.close();
-
-  // Botones táctiles
-  $('#btnStart').onclick=start;
-  $('#btnAnswer').onclick=submitAnswer;
-  $('#btnPass').onclick=doPass;
-  $('#btnGiveUp').onclick=markFail;
-  $('#btnPause').onclick=()=>pauseToggle();
-  $('#btnPauseFab').onclick=()=>pauseToggle();
-  $('#btnNew').onclick=()=>{ if(state.timer) clearInterval(state.timer); state.time.A=145; state.time.B=145; newGame(); };
-  $('#btnMic').onclick=()=>{ if(state.stt&&state.recognizer&&!state.paused){ try{ state.recognizer.start(); }catch(e){} } };
-  $('#btnWrite').onclick=()=>toggleTypingHold();
-
-  // Atajos (opcionales)
-  document.addEventListener('keydown',e=>{
-    if(e.key==='Enter'&&!e.ctrlKey) submitAnswer();
-    if(e.key==='Enter'&&e.ctrlKey) doPass();
-    if(e.key==='Escape') pauseToggle();
-  });
-
-  // Init
-  newGame();
-})();
-</script>
+    renderGrid();
+  </script>
 </body>
 </html>
